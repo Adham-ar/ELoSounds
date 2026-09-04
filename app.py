@@ -12,21 +12,20 @@ import os
 load_dotenv()
 
 
-
-# Add instance_path='/tmp' here
+# Set instance_path to /tmp so Flask-SQLAlchemy can create its folder without failing
 app = Flask(__name__, instance_path='/tmp')
-app.instance_path = '/tmp'
 
-# Ensure database URL handles postgres:// vs postgresql://
-db_url = os.environ.get("DATABASE_URL")
-if db_url and db_url.startswith("postgres://"):
+# Ensure your database URI is set (e.g., Neon PostgreSQL)
+# Fix 'postgres://' URI compatibility if pulling from environment variables
+db_url = os.environ.get('DATABASE_URL', '')
+if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
-app.config["SQLALCHEMY_DATABASE_URI"] = db_url
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url or 'sqlite:////tmp/app.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Initialize SQLAlchemy AFTER app with instance_path='/tmp' is created
 db = SQLAlchemy(app)
-
 
 # ----------------------------------------------------
 # ROUTES
