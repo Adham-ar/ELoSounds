@@ -8,22 +8,21 @@ from sqlalchemy import text
 from dotenv import load_dotenv
 from services.price_sync import sync_gear_prices_batch, fetch_price_for_gear
 from acoustics import classify_sound_signature
-
+import os
 load_dotenv()
 
-app = Flask(__name__)
 
-# ----------------------------------------------------
-# DATABASE CONFIGURATION (Vercel / Cloud PostgreSQL)
-# ----------------------------------------------------
-db_url = os.getenv('DATABASE_URL', 'sqlite:///app.db')
 
-# Ensure URI compatibility for SQLAlchemy 1.4+
+# Add instance_path='/tmp' here
+app = Flask(__name__, instance_path='/tmp')
+
+# Ensure database URL handles postgres:// vs postgresql://
+db_url = os.environ.get("DATABASE_URL")
 if db_url and db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = db_url
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config["SQLALCHEMY_DATABASE_URI"] = db_url
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 
