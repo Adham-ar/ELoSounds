@@ -4,19 +4,15 @@ import urllib.parse
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import text
+from sqlalchemy import text, bindparam
 from dotenv import load_dotenv
 from services.price_sync import sync_gear_prices_batch, fetch_price_for_gear
 from acoustics import classify_sound_signature
-import os
+
 load_dotenv()
 
-
-# Set instance_path to /tmp so Flask-SQLAlchemy can create its folder without failing
 app = Flask(__name__, instance_path='/tmp')
 
-# Ensure your database URI is set (e.g., Neon PostgreSQL)
-# Fix 'postgres://' URI compatibility if pulling from environment variables
 db_url = os.environ.get('DATABASE_URL', '')
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
@@ -24,7 +20,6 @@ if db_url.startswith("postgres://"):
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url or 'sqlite:////tmp/app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Initialize SQLAlchemy AFTER app with instance_path='/tmp' is created
 db = SQLAlchemy(app)
 
 # ----------------------------------------------------
@@ -39,7 +34,9 @@ def index():
         sql = text("""
             SELECT gear_id, name, brand, category, price, image_url, description 
             FROM gear 
-            WHERE name ILIKE :pattern OR brand ILIKE :pattern OR category ILIKE :pattern
+            WHERE LOWER(name) LIKE LOWER(:pattern) 
+               OR LOWER(brand) LIKE LOWER(:pattern) 
+               OR LOWER(category) LIKE LOWER(:pattern)
         """)
         rows = db.session.execute(sql, {"pattern": pattern}).mappings().all()
     else:
@@ -81,7 +78,6 @@ def gear_detail(gear_id):
         "Description": gear_row["description"],
     }
 
-    # Lazy On-Demand Price Refresh (30-Day Threshold)
     thirty_days_ago = datetime.now() - timedelta(days=30)
 
     if not gear["PriceLastUpdated"] or gear["PriceLastUpdated"] < thirty_days_ago:
@@ -99,12 +95,10 @@ def gear_detail(gear_id):
             db.session.execute(update_sql, {"now": now, "gear_id": gear_id})
             db.session.commit()
 
-    # Fetch EAV Specs
     sql_specs = text("SELECT spec_name, spec_value FROM specs_eav WHERE gear_id = :gear_id")
     spec_rows = db.session.execute(sql_specs, {"gear_id": gear_id}).mappings().all()
     specs = {row["spec_name"]: row["spec_value"] for row in spec_rows}
 
-    # Fetch Frequency Response Data
     sql_freq = text("""
         SELECT frequency_hz, amplitude_db 
         FROM frequency_data 
@@ -117,11 +111,9 @@ def gear_detail(gear_id):
         "db": [float(r["amplitude_db"]) for r in freq_rows],
     }
 
-    # Calculate Algorithmic Sound Signature
     raw_points = [{"x": h, "y": d} for h, d in zip(freq_data["hz"], freq_data["db"])]
     signature = classify_sound_signature(raw_points) if raw_points else None
 
-    # AutoEq PNG URL Construction
     rig = specs.get("Measurement Rig", "oratory1990").lower().strip()
     cat_clean = str(gear["Category"]).lower().strip()
     form_factor = "in-ear" if cat_clean in ["iem", "in-ear"] else "over-ear"
@@ -152,7 +144,6 @@ def compare():
 
     gear_ids = list(dict.fromkeys(gear_ids))
 
-    # 1. Fetch all products to populate search dropdown
     sql_all = text("SELECT gear_id, brand, name FROM gear ORDER BY brand ASC, name ASC")
     all_gear_rows = db.session.execute(sql_all).mappings().all()
     all_gear = [{"GearID": r["gear_id"], "Brand": r["brand"], "Name": r["name"]} for r in all_gear_rows]
@@ -160,12 +151,11 @@ def compare():
     if not gear_ids:
         return render_template("compare.html", items=[], chart_data_json=json.dumps([]), all_gear=all_gear)
 
-    # 2. Fetch selected items using PostgreSQL ANY array binding
     sql_selected = text("""
         SELECT gear_id, name, brand, category, price, image_url 
         FROM gear 
-        WHERE gear_id = ANY(:gear_ids)
-    """)
+        WHERE gear_id IN :gear_ids
+    """).bindparams(bindparam("gear_ids", expanding=True))
     gear_rows = db.session.execute(sql_selected, {"gear_ids": gear_ids}).mappings().all()
 
     gear_map = {}
@@ -188,7 +178,6 @@ def compare():
     for idx, item in enumerate(items):
         gid = item["GearID"]
 
-        # Fetch EAV Specs
         sql_specs = text("SELECT spec_name, spec_value FROM specs_eav WHERE gear_id = :gid")
         spec_rows = db.session.execute(sql_specs, {"gid": gid}).mappings().all()
         specs = {row["spec_name"]: row["spec_value"] for row in spec_rows}
@@ -201,7 +190,6 @@ def compare():
         encoded_name = urllib.parse.quote(item["Name"].strip())
         item["AutoEqURL"] = f"https://raw.githubusercontent.com/jaakkopasanen/AutoEq/master/results/{encoded_rig}/{form_factor}/{encoded_name}/{encoded_name}.png"
 
-        # Fetch Frequency Response Data
         sql_freq = text("""
             SELECT frequency_hz, amplitude_db 
             FROM frequency_data 
@@ -211,7 +199,6 @@ def compare():
         freq_rows = db.session.execute(sql_freq, {"gid": gid}).mappings().all()
         points = [{"x": float(r["frequency_hz"]), "y": float(r["amplitude_db"])} for r in freq_rows]
 
-        # Calculate Algorithmic Sound Signature
         item["Signature"] = classify_sound_signature(points) if points else None
 
         color = palette[idx % len(palette)]
