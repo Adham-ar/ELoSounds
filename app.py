@@ -11,15 +11,20 @@ from acoustics import classify_sound_signature
 
 load_dotenv()
 
-app = Flask(__name__, instance_path='/tmp')
+app = Flask(__name__)
 
-db_url = os.environ.get('DATABASE_URL', '')
+# Fetch database URL safely
+db_url = os.environ.get('DATABASE_URL', '').strip()
+
+# Fix legacy PostgreSQL protocol strings (PostgreSQL/Supabase/Neon compatibility)
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = db_url or 'sqlite:////tmp/app.db'
+# Fallback to an in-memory or temp SQLite database if DATABASE_URL is unassigned
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url if db_url else 'sqlite:////tmp/app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Initialize SQLAlchemy ONLY AFTER setting SQLALCHEMY_DATABASE_URI
 db = SQLAlchemy(app)
 
 # ----------------------------------------------------
