@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Search Results | ELoSounds{% endblock %}
+
+{% block extra_css %}
+<style>
+    .search-container {
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        gap: 2rem;
+    }
+
+    .filter-card {
+        background-color: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1.25rem;
+        height: fit-content;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .filter-group {
+        margin-bottom: 1.25rem;
+    }
+
+    .filter-group label {
+        display: block;
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .filter-group select {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        outline: none;
+    }
+
+    .results-header {
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="search-container">
+    <aside class="filter-card">
+        <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Filter Options</h3>
+        <form action="/search" method="GET">
+            <input type="hidden" name="q" value="{{ query }}">
+            
+            <div class="filter-group">
+                <label for="category">Category</label>
+                <select name="category" id="category" onchange="this.form.submit()">
+                    <option value="" {% if not selected_category %}selected{% endif %}>All Categories</option>
+                    <option value="Headphone" {% if selected_category == 'Headphone' %}selected{% endif %}>Headphones</option>
+                    <option value="IEM" {% if selected_category == 'IEM' %}selected{% endif %}>IEMs</option>
+                    <option value="DAC" {% if selected_category == 'DAC' %}selected{% endif %}>DACs</option>
+                    <option value="Amp" {% if selected_category == 'Amp' %}selected{% endif %}>Amps</option>
+                </select>
+            </div>
+        </form>
+    </aside>
+
+    <main>
+        <div class="results-header">
+            <h2>Search Results</h2>
+            <p style="color: var(--text-muted);">
+                Found {{ results|length }} result(s) {% if query %}for "{{ query }}"{% endif %}
+            </p>
+        </div>
+
+        {% if results %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.5rem;">
+            {% for item in results %}
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; display: flex; flex-direction: column;">
+                <span class="badge" style="width: fit-content; margin-bottom: 0.5rem;">{{ item.Category }}</span>
+                <h3 style="font-size: 1.1rem; font-weight: 700;">{{ item.Name }}</h3>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0.5rem 0 1rem; flex: 1;">{{ item.Description }}</p>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700;">${{ "%.2f"|format(item.Price) }}</span>
+                    <a href="/gear/{{ item.GearID }}" class="btn-primary" style="font-size: 0.8rem; padding: 0.3rem 0.7rem;">View</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 3rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px;">
+            <p style="color: var(--text-muted);">No products match your search criteria.</p>
+        </div>
+        {% endif %}
+    </main>
+</div>
+{% endblock %}

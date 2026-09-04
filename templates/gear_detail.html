@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}{{ gear.Name }} | ELoSounds Benchmark{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-grid {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .gear-card-detail {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1.5rem;
+        box-shadow: var(--shadow-sm);
+        height: fit-content;
+    }
+
+    .detail-img {
+        width: 100%;
+        height: 220px;
+        object-fit: cover;
+        border-radius: 6px;
+        background-color: #f1f5f9;
+        margin-bottom: 1rem;
+    }
+
+    .specs-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+    }
+
+    .specs-table td {
+        padding: 0.6rem 0;
+        border-bottom: 1px solid var(--border-color);
+        font-size: 0.9rem;
+    }
+
+    .specs-table td:first-child {
+        font-weight: 600;
+        color: var(--text-muted);
+        width: 40%;
+    }
+
+    .chart-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1.5rem;
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="detail-grid">
+    <!-- Gear Meta Sidebar -->
+    <div class="gear-card-detail">
+        <img src="{{ gear.ImageURL }}" alt="{{ gear.Name }}" class="detail-img" onerror="this.src='https://images.unsplash.com/photo-1505740420928-5e560c06d30e'">
+        <span class="badge">{{ gear.Category }}</span>
+        <h2 style="margin-top: 0.5rem; font-size: 1.4rem;">{{ gear.Name }}</h2>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.25rem;">Brand: {{ gear.Brand }}</p>
+
+        <h3 style="font-size: 1.5rem; margin: 1rem 0; color: var(--accent-primary);">${{ "%.2f"|format(gear.Price) }}</h3>
+        <p style="color: var(--text-primary); font-size: 0.9rem; line-height: 1.4;">{{ gear.Description }}</p>
+
+        <a href="/compare?ids={{ gear.GearID }}" class="btn-primary" style="display: block; text-align: center; margin-top: 1.5rem;">Add to Compare Engine</a>
+
+        <h4 style="margin-top: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Specifications</h4>
+        <table class="specs-table">
+            {% for name, value in specs.items() %}
+            <tr>
+                <td>{{ name }}</td>
+                <td>{{ value }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="2" style="color: var(--text-muted);">No extra specs listed.</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <!-- Right Column: Stacked Charts -->
+    <div class="charts-column">
+        <!-- Interactive Chart -->
+        <div class="chart-card">
+            <h3 style="margin-bottom: 0.5rem;">Interactive Frequency Response Curve</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">Normalized acoustic amplitude plotted across audible frequencies (20 Hz - 20 kHz).</p>
+            <div style="position: relative; height: 420px; width: 100%;">
+                <canvas id="freqChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Official AutoEq GitHub PNG Graph -->
+        <div class="chart-card">
+            <h3 style="margin-bottom: 0.5rem;">Official AutoEq Benchmark Plot</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">Original target-compensated plot sourced directly from the jaakkopasanen/AutoEq repository.</p>
+            <div style="text-align: center;">
+                <img src="{{ autoeq_png_url }}" alt="{{ gear.Name }} AutoEq Plot" style="max-width: 100%; height: auto; border-radius: 6px; border: 1px solid var(--border-color);" onerror="this.parentElement.parentElement.style.display='none';">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const freqData = {{ freq_data_json|safe }};
+
+    if (freqData.hz && freqData.hz.length > 0) {
+        const points = freqData.hz.map((hz, idx) => ({ x: hz, y: freqData.db[idx] }));
+
+        const ctx = document.getElementById('freqChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: '{{ gear.Name }}',
+                    data: points,
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.05)',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'logarithmic',
+                        min: 20,
+                        max: 20000,
+                        title: { display: true, text: 'Frequency (Hz)' },
+                        ticks: {
+                            callback: function(value) {
+                                if ([20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000].includes(value)) {
+                                    return value >= 1000 ? (value / 1000) + 'k' : value;
+                                }
+                            }
+                        }
+                    },
+                    y: {
+                        title: { display: true, text: 'Amplitude (dB)' }
+                    }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

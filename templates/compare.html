@@ -1,0 +1,626 @@
+{% extends "base.html" %}
+
+{% block title %}Gear Comparison | ELoSounds{% endblock %}
+
+{% block nav_search %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --bg-page: #f8fafc;
+        --bg-card: #ffffff;
+        --border-color: #e2e8f0;
+        --text-primary: #0f172a;
+        --text-secondary: #64748b;
+        --text-muted: #94a3b8;
+        --accent-blue: #2563eb;
+        --danger-red: #ef4444;
+    }
+
+    /* Sticky Top Control Toolbar */
+    .compare-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        padding: 0.85rem 1.25rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+
+    /* Live Search Input & Dropdown */
+    .search-wrapper {
+        position: relative;
+        flex: 1;
+        max-width: 440px;
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .search-input {
+        flex: 1;
+        padding: 0.55rem 0.9rem;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        background: #f8fafc;
+        color: var(--text-primary);
+        font-size: 0.9rem;
+        outline: none;
+        transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .search-input:focus {
+        border-color: var(--accent-blue);
+        background: #ffffff;
+    }
+
+    .search-results-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        max-height: 250px;
+        overflow-y: auto;
+        z-index: 100;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+        display: none;
+        margin-top: 6px;
+    }
+
+    .search-result-item {
+        padding: 0.6rem 1rem;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--border-color);
+        font-size: 0.88rem;
+    }
+
+    .search-result-item:hover {
+        background-color: #f1f5f9;
+    }
+
+    /* Toolbar Actions & Custom Toggle Switches */
+    .toolbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+    }
+
+    .toolbar-divider {
+        width: 1px;
+        height: 20px;
+        background-color: var(--border-color);
+    }
+
+    /* Custom Toggle Switch */
+    .switch-control {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        cursor: pointer;
+        user-select: none;
+        transition: color 0.15s ease;
+    }
+
+    .switch-control:hover {
+        color: var(--text-primary);
+    }
+
+    .switch-input {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .switch-slider {
+        position: relative;
+        width: 36px;
+        height: 20px;
+        background-color: #cbd5e1;
+        border-radius: 20px;
+        transition: background-color 0.2s ease;
+    }
+
+    .switch-slider::before {
+        content: "";
+        position: absolute;
+        height: 16px;
+        width: 16px;
+        left: 2px;
+        bottom: 2px;
+        background-color: #ffffff;
+        border-radius: 50%;
+        transition: transform 0.2s ease;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+    }
+
+    .switch-input:checked + .switch-slider {
+        background-color: var(--accent-blue);
+    }
+
+    .switch-input:checked + .switch-slider::before {
+        transform: translateX(16px);
+    }
+
+    /* Clean Red Ghost Button */
+    .btn-danger-ghost {
+        background: transparent;
+        border: 1px solid #fee2e2;
+        color: var(--danger-red);
+        padding: 0.4rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        transition: all 0.15s ease;
+    }
+
+    .btn-danger-ghost:hover {
+        background-color: #fef2f2;
+        border-color: #fca5a5;
+        color: #dc2626;
+    }
+
+    .btn-primary {
+        background-color: var(--accent-blue);
+        color: #fff;
+        border: none;
+        padding: 0.55rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.88rem;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+    }
+
+    .btn-primary:hover {
+        background-color: #1d4ed8;
+    }
+
+    /* Item Badges Grid */
+    .compare-cards-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 2.5rem;
+    }
+
+    .item-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.1rem;
+        position: relative;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .color-indicator {
+        position: absolute;
+        top: 0.85rem;
+        left: 0.85rem;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        box-shadow: 0 0 0 2px #fff;
+    }
+
+    .remove-btn {
+        position: absolute;
+        top: 0.6rem;
+        right: 0.6rem;
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        font-size: 1.2rem;
+        cursor: pointer;
+        padding: 0.2rem;
+        line-height: 1;
+    }
+
+    .remove-btn:hover { color: var(--danger-red); }
+
+    .card-img {
+        width: 100%;
+        height: 110px;
+        object-fit: contain;
+        margin-bottom: 0.75rem;
+    }
+
+    .card-brand {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        font-weight: 700;
+        letter-spacing: 0.05em;
+    }
+
+    .card-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0.2rem 0 0.4rem 0;
+        text-decoration: none;
+    }
+
+    .card-price {
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin-top: auto;
+    }
+
+    /* Section Cards */
+    .section-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    .section-title-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.25rem;
+    }
+
+    .chart-container {
+        position: relative;
+        width: 100%;
+        height: 480px;
+    }
+
+    /* AutoEq PNG Grid */
+    .autoeq-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .autoeq-card {
+        background: #f8fafc;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+    }
+
+    .autoeq-img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 4px;
+        margin-top: 0.5rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 1rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Sticky Clean Control Toolbar -->
+<div class="compare-toolbar">
+    <div class="search-wrapper">
+        <input type="text" id="gearSearch" class="search-input" placeholder="Search & add gear (e.g. Hexa, Aria)..." onkeyup="filterGearSearch()" autocomplete="off">
+        <button type="button" class="btn-primary" onclick="triggerTopSearchMatch()">Search</button>
+        <div id="searchResults" class="search-results-dropdown"></div>
+    </div>
+
+    <div class="toolbar-actions">
+        {% if items %}
+        <!-- Normalize Toggle Switch -->
+        <label class="switch-control" title="Normalize frequency response at 1kHz">
+            <input type="checkbox" id="normToggle" class="switch-input" onchange="toggleNormalization()">
+            <span class="switch-slider"></span>
+            <span>Normalize @ 1kHz</span>
+        </label>
+
+        <div class="toolbar-divider"></div>
+
+        <!-- Harman Target Toggle Switch -->
+        <label class="switch-control" title="Overlay Harman IE 2019 Target Curve">
+            <input type="checkbox" id="harmanToggle" class="switch-input" onchange="toggleHarmanTarget()">
+            <span class="switch-slider"></span>
+            <span>Harman Target</span>
+        </label>
+
+        <div class="toolbar-divider"></div>
+
+        <!-- Clear All Button -->
+        <button class="btn-danger-ghost" onclick="clearAllItems()" title="Clear all selected gear">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+            Clear All
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+{% if items %}
+<!-- Item Summary Cards -->
+<div class="compare-cards-grid">
+    {% for item in items %}
+    <div class="item-card">
+        <span class="color-indicator" style="background-color: {{ item.Color }};"></span>
+        <button class="remove-btn" onclick="removeItem({{ item.GearID }})" title="Remove item">&times;</button>
+
+        <img src="{{ item.ImageURL }}" alt="{{ item.Name }}" class="card-img" onerror="this.src='https://images.unsplash.com/photo-1505740420928-5e560c06d30e'">
+
+        <span class="card-brand">{{ item.Brand }}</span>
+        <a href="/gear/{{ item.GearID }}" class="card-title">{{ item.Name }}</a>
+
+        <!-- Algorithmic Tonal Classification Badge -->
+        {% if item.Signature %}
+        <div style="margin: 0.25rem 0 0.4rem 0;">
+            <span style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.45rem; border-radius: 4px; font-size: 0.72rem; font-weight: 600; background-color: {{ item.Signature.color }}18; color: {{ item.Signature.color }}; border: 1px solid {{ item.Signature.color }}40;" title="{{ item.Signature.desc }}">
+                <span style="font-size: 0.55rem;">●</span> {{ item.Signature.tag }}
+            </span>
+        </div>
+        {% endif %}
+
+        <div class="card-price">
+            {% if item.Price %}
+                ${{ "%.2f"|format(item.Price) }}
+            {% else %}
+                <span style="color: var(--text-muted); font-size: 0.9rem; font-weight: normal;">Unknown</span>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Interactive Overlay Graph -->
+<div class="section-card">
+    <div class="section-title-bar">
+        <h2 style="font-size: 1.15rem; font-weight: 700; margin: 0;">Frequency Response Graph</h2>
+    </div>
+    <div class="chart-container">
+        <canvas id="compareChart"></canvas>
+    </div>
+</div>
+
+<!-- Raw AutoEq Target Plots -->
+<div class="section-card">
+    <h2 style="font-size: 1.15rem; font-weight: 700; margin-top: 0; margin-bottom: 1.25rem;">Raw Measurement Plots (AutoEq)</h2>
+    <div class="autoeq-grid">
+        {% for item in items %}
+        <div class="autoeq-card">
+            <h4 style="color: var(--text-primary); margin-top:0; margin-bottom: 0.25rem;">{{ item.Brand }} {{ item.Name }}</h4>
+            <img src="{{ item.AutoEqURL }}" alt="AutoEq plot for {{ item.Name }}" class="autoeq-img" onerror="this.parentElement.innerHTML='<h4 style=\'margin-bottom:0.5rem;\'>{{ item.Brand }} {{ item.Name }}</h4><p style=\'color: var(--text-muted); padding: 2rem;\'>Raw AutoEq plot unavailable.</p>'">
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% else %}
+<div class="empty-state">
+    <h2 style="margin-top:0;">No items selected for comparison</h2>
+    <p style="color: var(--text-muted); margin: 0.75rem 0 1.5rem 0;">Use the search bar above to search and add equipment to compare.</p>
+    <a href="/" class="btn-primary" style="text-decoration:none; display:inline-block;">Browse Catalog</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    const allGearList = {{ all_gear|tojson|safe }};
+    const rawDatasets = {{ chart_data_json|safe }};
+
+    let chartInstance = null;
+    let isNormalized = false;
+    let isHarmanVisible = false;
+
+    // --- Search & Item Management ---
+    function filterGearSearch() {
+        const query = document.getElementById('gearSearch').value.toLowerCase().trim();
+        const resultsContainer = document.getElementById('searchResults');
+
+        if (!query) {
+            resultsContainer.style.display = 'none';
+            return;
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        let activeIds = urlParams.get('ids') ? urlParams.get('ids').split(',') : [];
+
+        const matches = allGearList.filter(g =>
+            (g.Brand.toLowerCase().includes(query) || g.Name.toLowerCase().includes(query)) &&
+            !activeIds.includes(String(g.GearID))
+        );
+
+        if (matches.length === 0) {
+            resultsContainer.innerHTML = '<div class="search-result-item" style="cursor:default; color:var(--text-muted);">No matching gear found</div>';
+        } else {
+            resultsContainer.innerHTML = matches.map(g => `
+                <div class="search-result-item" onclick="addGearId(${g.GearID})">
+                    <span><strong>${g.Brand}</strong> ${g.Name}</span>
+                    <span style="color: var(--text-muted); font-size: 0.8rem;">+ Add</span>
+                </div>
+            `).join('');
+        }
+        resultsContainer.style.display = 'block';
+    }
+
+    function triggerTopSearchMatch() {
+        const query = document.getElementById('gearSearch').value.toLowerCase().trim();
+        if (!query) return;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        let activeIds = urlParams.get('ids') ? urlParams.get('ids').split(',') : [];
+
+        const match = allGearList.find(g =>
+            (g.Brand.toLowerCase().includes(query) || g.Name.toLowerCase().includes(query)) &&
+            !activeIds.includes(String(g.GearID))
+        );
+
+        if (match) {
+            addGearId(match.GearID);
+        } else {
+            filterGearSearch();
+        }
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.search-wrapper')) {
+            const res = document.getElementById('searchResults');
+            if (res) res.style.display = 'none';
+        }
+    });
+
+    function addGearId(gearId) {
+        const urlParams = new URLSearchParams(window.location.search);
+        let ids = urlParams.get('ids') ? urlParams.get('ids').split(',') : [];
+        if (!ids.includes(String(gearId))) {
+            ids.push(gearId);
+            window.location.search = '?ids=' + ids.join(',');
+        }
+    }
+
+    function removeItem(gearId) {
+        const urlParams = new URLSearchParams(window.location.search);
+        let ids = urlParams.get('ids') ? urlParams.get('ids').split(',') : [];
+        ids = ids.map(id => id.trim()).filter(id => id !== String(gearId));
+        if (ids.length > 0) {
+            window.location.search = '?ids=' + ids.join(',');
+        } else {
+            window.location.href = '/compare';
+        }
+    }
+
+    function clearAllItems() {
+        window.location.href = '/compare';
+    }
+
+    // --- Fixed Harman IE 2019 Target (Base reference @ 84 dB @ 1 kHz) ---
+    const HARMAN_IE_2019_TARGET = [
+        {x: 20, y: 93.0}, {x: 30, y: 93.0}, {x: 50, y: 92.8}, {x: 100, y: 90.5},
+        {x: 200, y: 87.0}, {x: 500, y: 84.5}, {x: 1000, y: 84.0}, {x: 2000, y: 88.5},
+        {x: 3000, y: 92.0}, {x: 4000, y: 90.0}, {x: 6000, y: 85.0}, {x: 8000, y: 84.0},
+        {x: 10000, y: 81.0}, {x: 20000, y: 74.0}
+    ];
+
+    // --- Graph Engine ---
+    function updateChartDisplay() {
+        let activeDatasets = rawDatasets.map(ds => isNormalized ? getNormalizedData(ds) : ds);
+
+        if (isHarmanVisible) {
+            activeDatasets.push({
+                label: 'Harman IE 2019 Target',
+                data: HARMAN_IE_2019_TARGET,
+                borderColor: '#475569',
+                borderDash: [6, 6],
+                borderWidth: 2,
+                pointRadius: 0,
+                fill: false,
+                tension: 0.3
+            });
+        }
+
+        renderChart(activeDatasets);
+    }
+
+    function getNormalizedData(dataset) {
+        const pt1k = dataset.data.reduce((prev, curr) =>
+            Math.abs(curr.x - 1000) < Math.abs(prev.x - 1000) ? curr : prev, dataset.data[0]);
+        const offset = 84.0 - pt1k.y;
+
+        return {
+            ...dataset,
+            data: dataset.data.map(pt => ({ x: pt.x, y: parseFloat((pt.y + offset).toFixed(2)) }))
+        };
+    }
+
+    function renderChart(datasetArray) {
+        const ctx = document.getElementById('compareChart').getContext('2d');
+        if (chartInstance) chartInstance.destroy();
+
+        chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: { datasets: datasetArray },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: {
+                        type: 'logarithmic',
+                        title: { display: true, text: 'Frequency (Hz)', color: '#64748b' },
+                        min: 20,
+                        max: 20000,
+                        grid: { color: '#f1f5f9' },
+                        ticks: {
+                            color: '#94a3b8',
+                            callback: val => [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000].includes(val)
+                                ? (val >= 1000 ? (val / 1000) + 'k' : val) : null
+                        }
+                    },
+                    y: {
+                        title: { display: true, text: 'Amplitude (dB)', color: '#64748b' },
+                        min: 60,
+                        max: 100,
+                        grid: { color: '#f1f5f9' },
+                        ticks: {
+                            color: '#94a3b8',
+                            stepSize: 5
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8 } },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)} dB @ ${Math.round(ctx.parsed.x)} Hz`
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // --- Controls ---
+    function toggleNormalization() {
+        const normToggle = document.getElementById('normToggle');
+        if (normToggle) isNormalized = normToggle.checked;
+        updateChartDisplay();
+    }
+
+    function toggleHarmanTarget() {
+        const harmanToggle = document.getElementById('harmanToggle');
+        if (harmanToggle) isHarmanVisible = harmanToggle.checked;
+        updateChartDisplay();
+    }
+
+    if (rawDatasets && rawDatasets.length > 0) {
+        updateChartDisplay();
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block title %}ELoSounds | Audio Equipment Catalog{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero-section {
+        text-align: center;
+        padding: 2.5rem 1rem 2rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .hero-title {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--text-primary);
+    }
+
+    .hero-subtitle {
+        color: var(--text-muted);
+        margin-top: 0.5rem;
+        font-size: 1rem;
+    }
+
+    /* Tabs Bar */
+    .tabs-container {
+        display: flex;
+        gap: 0.75rem;
+        margin-bottom: 2rem;
+        border-bottom: 2px solid var(--border-color);
+        padding-bottom: 0.5rem;
+        overflow-x: auto;
+    }
+
+    .tab-btn {
+        background: transparent;
+        border: none;
+        padding: 0.6rem 1.2rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        cursor: pointer;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+    }
+
+    .tab-btn:hover {
+        color: var(--accent-primary);
+        background-color: #eff6ff;
+    }
+
+    .tab-btn.active {
+        color: #ffffff;
+        background-color: var(--accent-primary);
+    }
+
+    /* Grid Layout */
+    .catalog-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .gear-card {
+        background-color: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .gear-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .card-img {
+        width: 100%;
+        height: 180px;
+        object-fit: cover;
+        background-color: #f1f5f9;
+    }
+
+    .card-body {
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
+
+    .card-header-tags {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .card-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.4rem;
+    }
+
+    .card-desc {
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        margin-bottom: 1rem;
+        flex: 1;
+        line-height: 1.4;
+    }
+
+    .card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .card-price {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .card-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn-secondary {
+        background-color: #f1f5f9;
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+        padding: 0.4rem 0.8rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 500;
+        text-decoration: none;
+    }
+
+    .btn-secondary:hover {
+        background-color: #e2e8f0;
+    }
+
+    .no-items-msg {
+        display: none;
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 3rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        color: var(--text-muted);
+    }
+
+    .empty-search-state {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 3.5rem 1.5rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+    <h1 class="hero-title">Audio Equipment Intelligence</h1>
+    <p class="hero-subtitle">Explore, benchmark, and compare frequency response measurements directly from raw target curves.</p>
+</section>
+
+<!-- Category Tabs -->
+<div class="tabs-container">
+    <button class="tab-btn active" onclick="filterTab('all', this)">All Gear</button>
+    <button class="tab-btn" onclick="filterTab('Headphone', this)">Headphones</button>
+    <button class="tab-btn" onclick="filterTab('IEM', this)">IEMs</button>
+    <button class="tab-btn" onclick="filterTab('DAC', this)">DACs</button>
+    <button class="tab-btn" onclick="filterTab('Amp', this)">Amps</button>
+</div>
+
+<!-- Search Query Feedback Banner -->
+{% if search_query %}
+<div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); padding: 0.75rem 1.25rem; border-radius: 6px; border: 1px solid var(--border-color);">
+    <p style="color: var(--text-muted); margin: 0;">Showing search results for: <strong>"{{ search_query }}"</strong></p>
+    <a href="/" class="btn-secondary">Clear Search</a>
+</div>
+{% endif %}
+
+<!-- Product Grid -->
+<div class="catalog-grid" id="catalog-grid">
+    {% for item in gear_items %}
+    <div class="gear-card" data-category="{{ item.Category }}">
+        <img src="{{ item.ImageURL }}" alt="{{ item.Name }}" class="card-img" onerror="this.src='https://images.unsplash.com/photo-1505740420928-5e560c06d30e'">
+        <div class="card-body">
+            <div class="card-header-tags">
+                <span class="badge">{{ item.Category }}</span>
+                <small style="color: var(--text-muted); font-weight: 600;">{{ item.Brand }}</small>
+            </div>
+            <h3 class="card-title">{{ item.Name }}</h3>
+            <p class="card-desc">{{ item.Description }}</p>
+
+            <div class="card-footer">
+                <span class="card-price">${{ "%.2f"|format(item.Price) }}</span>
+                <div class="card-actions">
+                    <a href="/gear/{{ item.GearID }}" class="btn-secondary">Details</a>
+                    <a href="/compare?ids={{ item.GearID }}" class="btn-primary" style="font-size: 0.85rem;">Compare</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-search-state">
+        <h3 style="margin-bottom: 0.5rem; color: var(--text-primary);">No gear found</h3>
+        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
+            {% if search_query %}
+                No equipment matching <strong>"{{ search_query }}"</strong> was found in our database.
+            {% else %}
+                No equipment currently available.
+            {% endif %}
+        </p>
+        <a href="/" class="btn-primary" style="padding: 0.5rem 1.25rem; text-decoration: none;">View All Gear</a>
+    </div>
+    {% endfor %}
+
+    <div class="no-items-msg" id="no-items">
+        No gear currently available in this category.
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function filterTab(category, button) {
+        // Highlight selected tab
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+
+        // Filter gear items
+        const cards = document.querySelectorAll('.gear-card');
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+            const cardCategory = card.getAttribute('data-category');
+            if (category === 'all' || cardCategory === category) {
+                card.style.display = 'flex';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        // Show/hide empty state for tabs only if cards exist in the DOM
+        const emptyMsg = document.getElementById('no-items');
+        if (emptyMsg && cards.length > 0) {
+            emptyMsg.style.display = visibleCount === 0 ? 'block' : 'none';
+        }
+    }
+</script>
+{% endblock %}
