@@ -15,6 +15,7 @@ load_dotenv()
 
 # Add instance_path='/tmp' here
 app = Flask(__name__, instance_path='/tmp')
+app.instance_path = '/tmp'
 
 # Ensure database URL handles postgres:// vs postgresql://
 db_url = os.environ.get("DATABASE_URL")
