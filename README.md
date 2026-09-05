@@ -66,4 +66,4 @@ You can try out the live web app here: **[https://elosounds.vercel.app](https://
 
 * **Adham Amr**
   * Portfolio: [https://github.com/AdhamAmr](https://github.com/)
-  * LinkedIn: [https://linkedin.com/in/adhamamr](https://linkedin.com/)
+  * LinkedIn: [[https://linkedin.com/in/adhamamr](https://www.linkedin.com/in/adham-amr-18a2562a3/)](https://linkedin.com/)
