@@ -1,5 +1,7 @@
 # EloSounds 🎧
 
+[![Live Demo](https://img.shields.io/badge/Demo-Live_App-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://elosounds.vercel.app)
+
 > A web application designed for audio enthusiasts to explore, compare, and analyze audio equipment specifications and real-time market pricing.
 
 ---
